@@ -1,0 +1,2 @@
+admins = [1589351394,]
+TOKEN = "7733014588:AAGOcql9Oue_Tjk2BW-if5mN8Jn-8izWpf8"
