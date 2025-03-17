@@ -13,7 +13,8 @@ def create_tables():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tg_id INTEGER UNIQUE NOT NULL,
             fullname TEXT NOT NULL,
-            phone TEXT NOT NULL,
+            username TEXT,
+            phone TEXT,
             is_active INTEGER NOT NULL DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -21,9 +22,10 @@ def create_tables():
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS bot_referrals (
-            invitation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             inviter_id INTEGER NOT NULL,
             follower_id INTEGER UNIQUE NOT NULL,
+            status TEXT NOT NULL DEFAULT 'neutral',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (inviter_id) REFERENCES bot_users (tg_id) ON DELETE CASCADE,
             FOREIGN KEY (follower_id) REFERENCES bot_users (tg_id) ON DELETE CASCADE
@@ -34,7 +36,69 @@ def create_tables():
     conn.close()
 
 
-#
+# USERS DB
+def add_user(user_id, fullname, username=None):
+    conn = sqlite3.connect(path_to_db)
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM bot_users WHERE tg_id = '{user_id}'")
+    if not cur.fetchone():
+        sql_query = f"INSERT INTO bot_users(tg_id, fullname, username) VALUES (?,?,?)"
+        new_data = (user_id, fullname, username)
+        cur.execute(sql_query, new_data)
+    else:
+        sql_query = "UPDATE bot_users SET fullname=?, username=? WHERE tg_id = ?"
+        new_data = (fullname, username, user_id)
+        cur.execute(sql_query, new_data)
+    conn.commit()
+    conn.close()
+
+
+def add_referral(inviter_id, follower_id):
+    conn = sqlite3.connect(path_to_db)
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM bot_referrals WHERE follower_id = '{follower_id}'")
+    if not cur.fetchone():
+        sql_query = f"INSERT INTO bot_referrals(inviter_id, follower_id) VALUES (?,?)"
+        new_data = (inviter_id, follower_id)
+        cur.execute(sql_query, new_data)
+    conn.commit()
+    conn.close()
+
+
+def update_follower_status(follower_id, status):
+    conn = sqlite3.connect(path_to_db)
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM bot_referrals WHERE follower_id = '{follower_id}'")
+    if not cur.fetchone():
+        return
+    cur.execute(f"UPDATE bot_referrals SET status=? WHERE follower_id=?", (status, follower_id))
+    conn.commit()
+    conn.close()
+
+
+def get_inviter(follower_id):
+    conn = sqlite3.connect(path_to_db)
+    cur = conn.cursor()
+    cur.execute(f"SELECT inviter_id FROM bot_referrals WHERE follower_id = '{follower_id}'")
+    inviter_id = cur.fetchone()
+    if not inviter_id:
+        return
+    else:
+        cur.execute(f"SELECT tg_id, fullname FROM bot_users WHERE tg_id = '{inviter_id[0]}'")
+        inviter = cur.fetchone()
+    conn.close()
+    return inviter
+
+
+def get_inviter_balls(inviter_id):
+    conn = sqlite3.connect(path_to_db)
+    cur = conn.cursor()
+    cur.execute(f"SELECT COUNT(follower_id) FROM bot_referrals WHERE status = 'subscribed' AND inviter_id={inviter_id}")
+    balls = cur.fetchone()
+    if not balls:
+        return 0
+    return balls[0]
+
 # def get_all_categories():
 #     conn = sqlite3.connect(path_to_db)
 #     cur = conn.cursor()
@@ -180,21 +244,7 @@ def create_tables():
 #     return overall
 #
 #
-# # USERS DB
-# def add_user(user_id, first_name, last_name='None', username=None):
-#     conn = sqlite3.connect(path_to_users_db)
-#     cur = conn.cursor()
-#     cur.execute(f"SELECT * FROM users WHERE user_id = '{user_id}'")
-#     if not cur.fetchone():
-#         sql_query = f"INSERT INTO users(user_id, first_name, last_name, username) VALUES (?,?,?,?)"
-#         new_data = (user_id, first_name, last_name, username)
-#         cur.execute(sql_query, new_data)
-#     else:
-#         sql_query = "UPDATE users SET first_name=?, last_name=?, username=? WHERE user_id = ?"
-#         new_data = (first_name, last_name, username, user_id)
-#         cur.execute(sql_query, new_data)
-#     conn.commit()
-#     conn.close()
+
 #
 #
 # def get_user(user_id):

@@ -5,7 +5,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from data.config import admins, TOKEN
+from data.config import admins, TOKEN, CHANNEL_ID
 from utils import sqlite as db
 scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
 
